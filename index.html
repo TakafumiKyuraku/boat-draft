@@ -51,6 +51,19 @@
     .summary ol { padding-left: 24px; line-height: 2; margin-bottom: 0; }
     .hidden { display: none !important; }
     .footer-note { color: #64748b; text-align: center; font-size: 12px; margin-top: 18px; }
+
+    .form-stack{display:grid;gap:12px}.form-stack label,#pickArea label{display:grid;gap:7px;font-size:14px;font-weight:600}
+    .room-code-box{background:#0f172a;border:1px solid #0d9488;border-radius:12px;padding:15px;margin:16px 0}
+    .room-code{display:block;font-size:28px;letter-spacing:4px;margin-top:5px;color:#5eead4}
+    .credential-list,.reveal-list{display:grid;gap:9px;margin:12px 0 18px}
+    .credential{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:11px}
+    .credential code{display:block;color:#5eead4;overflow-wrap:anywhere}
+    .live-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+    .live-summary div{background:#0f172a;border-radius:10px;padding:12px;min-width:0}.live-summary strong{display:block;margin-top:5px;overflow-wrap:anywhere}
+    .status-box{background:#0f172a;border:1px solid #475569;border-radius:10px;padding:13px;margin:12px 0 16px;line-height:1.6}
+    #pickArea{display:grid;gap:10px}.reveal-item{background:#0f172a;border-radius:9px;padding:10px 12px;display:flex;justify-content:space-between;gap:10px}
+    .reveal-item.won{border:1px solid #0d9488}.reveal-item.lost{border:1px solid #b45309}
+    .acquired-chip{background:#134e4a;color:#ccfbf1;border:1px solid #0f766e;border-radius:999px;padding:6px 10px;font-size:13px}
     @media (max-width: 520px) {
       body { padding: 20px 12px 36px; }
       .panel { padding: 16px; }
@@ -106,21 +119,39 @@
 
     <section id="draftStart" class="hidden">
       <button id="backButton" class="back-btn" type="button">← 参加者登録に戻る</button>
-      <div class="panel">
-        <div class="step">STEP 2</div>
-        <h2>ドラフト開始</h2>
-        <p class="muted">今回の参加者が確定しました。</p>
-        <div class="summary">
-          <strong id="finalCount"></strong>
-          <ol id="finalList"></ol>
-        </div>
-        <p class="muted">次のステップで、同時指名・重複時の抽選・指名順の進行機能を追加していきます。</p>
-        <button id="editButton" class="secondary" type="button" style="width:100%">参加者を変更する</button>
+      <div class="panel"><div class="step">STEP 2</div><h2>ドラフトルーム作成</h2>
+        <p class="muted">ルームを作成し、各参加者に専用コードを渡してください。</p>
+        <div class="summary"><strong id="finalCount"></strong><ol id="finalList"></ol></div>
+        <button id="createRoomButton" class="primary" type="button">ドラフトルームを作成する</button>
+        <p id="createRoomMessage" class="hint" aria-live="polite"></p>
+        <div id="createdRoom" class="hidden"><div class="room-code-box"><span class="muted">ルームコード</span><strong id="createdRoomCode" class="room-code"></strong></div>
+          <h3>参加者ごとの専用コード</h3><p class="muted">各参加者本人にだけ専用コードを渡してください。</p><div id="memberCredentials" class="credential-list"></div></div>
+        <button id="editButton" class="secondary" type="button" style="width:100%;margin-top:12px">参加者を変更する</button>
       </div>
     </section>
+
+    <section id="joinRoomSection"><div class="panel"><div class="step">STEP 3</div><h2>ルームに参加</h2>
+      <p class="muted">ルームコードと自分専用の参加コードを入力してください。</p>
+      <div class="form-stack">
+        <label>ルームコード<input id="joinRoomCode" class="search" maxlength="12" placeholder="例：A1B2C3D4"></label>
+        <label>自分専用の参加コード<input id="joinAccessToken" class="search" type="password" placeholder="参加者ごとの専用コード"></label>
+        <button id="joinRoomButton" class="primary" type="button">このルームに参加する</button><p id="joinMessage" class="hint"></p>
+      </div></div></section>
+    <section id="liveDraft" class="hidden"><div class="panel"><div class="step">LIVE DRAFT</div><h2>同時指名</h2>
+      <div class="live-summary"><div><span class="muted">参加者</span><strong id="liveMyName">-</strong></div><div><span class="muted">ラウンド</span><strong id="liveRound">-</strong></div><div><span class="muted">指名回数</span><strong id="liveAttempt">-</strong></div></div>
+      <div id="liveStatus" class="status-box">接続中…</div>
+      <div id="pickArea"><label>指名する選手<select id="candidateSelect" class="search"><option value="">候補を読み込み中</option></select></label><button id="submitPickButton" class="primary" disabled>この選手を指名する</button></div>
+      <p id="pickMessage" class="hint"></p><div id="lastRevealArea" class="hidden"><h3>直近の指名結果</h3><div id="lastRevealList" class="reveal-list"></div></div>
+      <h3>獲得済み選手</h3><div id="acquiredList" class="selected-list"></div>
+      <button id="leaveRoomButton" class="secondary" style="width:100%;margin-top:18px">この端末の参加を終了</button>
+    </div></section>
   </main>
 
   <script>
+    const SUPABASE_URL = "https://cvazmwrqtsmreqvuejpk.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_ATXn9_JLP7pR0bZmVpMyw_jK0VF51W";
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     const initialRoster = [
       "上條暢嵩", "上野真之介", "中島孝平", "中野次郎", "丸野一樹",
       "久田敏之", "今泉友吾", "仲谷颯仁", "佐藤翼", "原田幸哉",
@@ -280,6 +311,86 @@
     registerButton.addEventListener("click", showDraftStart);
     document.getElementById("backButton").addEventListener("click", showRegistration);
     document.getElementById("editButton").addEventListener("click", showRegistration);
+
+
+    let roomCode="", accessToken="", candidatePlayers=[], pollTimer=null;
+    const $=id=>document.getElementById(id);
+    const msg=(id,t)=>{$(id).textContent=t||""};
+
+    async function createSharedRoom(){
+      const b=$("createRoomButton");b.disabled=true;msg("createRoomMessage","ルームを作成しています…");
+      try{
+        const {data,error}=await db.rpc("create_draft_room",{p_member_names:confirmedParticipants});if(error)throw error;
+        $("createdRoomCode").textContent=data.room_code;const list=$("memberCredentials");list.replaceChildren();
+        data.members.forEach(m=>{
+          const row=document.createElement("div");row.className="credential";
+          const info=document.createElement("div"),name=document.createElement("strong"),code=document.createElement("code");
+          name.textContent=m.seat_no+". "+m.member_name;code.textContent=m.access_token;info.append(name,code);
+          const copy=document.createElement("button");copy.className="secondary";copy.type="button";copy.textContent="コピー";
+          copy.onclick=async()=>{try{await navigator.clipboard.writeText(m.access_token);copy.textContent="コピー済み"}catch{msg("createRoomMessage","専用コードを長押ししてコピーしてください")}};
+          row.append(info,copy);list.append(row);
+        });
+        $("createdRoom").classList.remove("hidden");msg("createRoomMessage","作成完了！ルームコードと各自の専用コードを共有してください。");
+      }catch(e){console.error(e);msg("createRoomMessage","作成失敗："+(e.message||e))}
+      finally{b.disabled=false}
+    }
+    async function loadCandidates(){
+      const {data,error}=await db.from("players").select("name").eq("is_active",true).order("name");
+      if(error)throw error;candidatePlayers=(data||[]).map(x=>x.name).filter(Boolean);
+      if(!candidatePlayers.length)throw new Error("候補選手がありません");
+    }
+    async function getState(){
+      const {data,error}=await db.rpc("get_draft_state",{p_room_code:roomCode,p_access_token:accessToken});
+      if(error)throw error;return data;
+    }
+    async function joinRoom(){
+      const code=$("joinRoomCode").value.trim().toUpperCase(),token=$("joinAccessToken").value.trim();
+      if(!code||!token){msg("joinMessage","ルームコードと専用コードを入力してください");return}
+      const b=$("joinRoomButton");b.disabled=true;msg("joinMessage","接続しています…");
+      try{
+        roomCode=code;accessToken=token;await loadCandidates();const state=await getState();
+        sessionStorage.setItem("boatDraftRoom",JSON.stringify({roomCode,accessToken}));
+        $("joinRoomSection").classList.add("hidden");$("registration").classList.add("hidden");$("draftStart").classList.add("hidden");$("liveDraft").classList.remove("hidden");
+        msg("joinMessage","");renderState(state);if(pollTimer)clearInterval(pollTimer);
+        pollTimer=setInterval(async()=>{try{renderState(await getState())}catch(e){console.error(e);msg("pickMessage","状態更新に失敗。通信を確認してください")}},2500);
+        window.scrollTo({top:0,behavior:"smooth"});
+      }catch(e){console.error(e);msg("joinMessage","参加できません："+(e.message||e))}
+      finally{b.disabled=false}
+    }
+    function renderState(s){
+      $("liveMyName").textContent=s.my_name;$("liveRound").textContent=s.current_round+"ラウンド";$("liveAttempt").textContent=s.attempt_no+"回目";
+      $("liveStatus").textContent="指名送信："+s.submitted_count+" / "+s.active_count+"人";
+      const awards=s.acquired_players||[],owned=awards.map(x=>x.player_name),box=$("acquiredList");box.replaceChildren();
+      if(!awards.length){const x=document.createElement("span");x.className="muted";x.textContent="まだ獲得選手はいません";box.append(x)}
+      awards.forEach(x=>{const c=document.createElement("span");c.className="acquired-chip";c.textContent=x.member_name+"："+x.player_name;box.append(c)});
+      const reveal=s.last_reveal||[],area=$("lastRevealArea"),list=$("lastRevealList");list.replaceChildren();
+      if(reveal.length){area.classList.remove("hidden");reveal.forEach(x=>{const r=document.createElement("div");r.className="reveal-item "+(x.won?"won":"lost");const a=document.createElement("span"),b=document.createElement("strong");a.textContent=x.member_name;b.textContent=x.player_name+(x.won?"（獲得）":"（再指名）");r.append(a,b);list.append(r)})}
+      else area.classList.add("hidden");
+      const pick=$("pickArea"),submit=$("submitPickButton"),select=$("candidateSelect");
+      if(s.my_awarded){pick.classList.add("hidden");msg("pickMessage","獲得確定："+s.my_awarded_player+"。他の参加者の完了を待っています。")}
+      else if(s.my_submitted){pick.classList.add("hidden");msg("pickMessage","指名送信済み。全員の送信完了後に結果が公開されます。")}
+      else{
+        pick.classList.remove("hidden");msg("pickMessage","");const prev=select.value;select.replaceChildren();
+        const opt=document.createElement("option");opt.value="";opt.textContent="選手を選択してください";select.append(opt);
+        candidatePlayers.filter(n=>!owned.includes(n)).forEach(n=>{const o=document.createElement("option");o.value=n;o.textContent=n;select.append(o)});
+        if(candidatePlayers.includes(prev)&&!owned.includes(prev))select.value=prev;
+        submit.disabled=!select.value;select.onchange=()=>submit.disabled=!select.value;
+      }
+    }
+    async function submitPick(){
+      const name=$("candidateSelect").value;if(!name)return;const b=$("submitPickButton");b.disabled=true;msg("pickMessage","指名を送信しています…");
+      try{const {data,error}=await db.rpc("submit_draft_pick",{p_room_code:roomCode,p_access_token:accessToken,p_player_name:name});if(error)throw error;renderState(data)}
+      catch(e){console.error(e);msg("pickMessage","送信失敗："+(e.message||e));b.disabled=false}
+    }
+    function leaveRoom(){
+      if(pollTimer)clearInterval(pollTimer);pollTimer=null;sessionStorage.removeItem("boatDraftRoom");roomCode="";accessToken="";
+      $("liveDraft").classList.add("hidden");$("joinRoomSection").classList.remove("hidden");$("joinRoomCode").value="";$("joinAccessToken").value="";
+    }
+    $("createRoomButton").addEventListener("click",createSharedRoom);
+    $("joinRoomButton").addEventListener("click",joinRoom);
+    $("submitPickButton").addEventListener("click",submitPick);
+    $("leaveRoomButton").addEventListener("click",leaveRoom);
+    (async()=>{try{const saved=JSON.parse(sessionStorage.getItem("boatDraftRoom")||"null");if(saved){$("joinRoomCode").value=saved.roomCode;$("joinAccessToken").value=saved.accessToken;await joinRoom()}}catch(e){console.warn(e)}})();
 
     render();
   </script>
