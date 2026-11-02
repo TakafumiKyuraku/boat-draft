@@ -43,6 +43,20 @@ create table if not exists public.draft_picks (
   unique (room_id, round_no, attempt_no, member_id)
 );
 
+-- Upgrade older draft_picks tables created before room_id was introduced.
+alter table public.draft_picks
+  add column if not exists room_id uuid references public.draft_rooms(id) on delete cascade;
+
+-- Recover the room relationship for legacy picks using their member record.
+update public.draft_picks p
+set room_id = m.room_id
+from public.draft_room_members m
+where p.room_id is null
+  and p.member_id = m.id;
+
+create index if not exists draft_picks_room_round_attempt_idx
+  on public.draft_picks(room_id, round_no, attempt_no);
+
 create table if not exists public.draft_awards (
   id uuid primary key default gen_random_uuid(),
   room_id uuid not null references public.draft_rooms(id) on delete cascade,
