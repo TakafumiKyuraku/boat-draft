@@ -1,5 +1,6 @@
 -- BOAT DRAFT: shared-room backend
 -- Run this entire file once in Supabase SQL Editor.
+create extension if not exists pgcrypto with schema extensions;
 
 create table if not exists public.draft_rooms (
   id uuid primary key default gen_random_uuid(),
@@ -99,7 +100,7 @@ begin
       (room_id, seat_no, member_name, access_token_hash)
     values
       (v_room_id, v_seat, btrim(v_name),
-       encode(sha256(convert_to(v_token, 'UTF8')), 'hex'));
+       encode(extensions.digest(convert_to(v_token, 'UTF8'), 'sha256'), 'hex'));
 
     v_members := v_members || jsonb_build_array(jsonb_build_object(
       'seat_no', v_seat,
@@ -143,7 +144,7 @@ begin
   select * into v_me
   from public.draft_room_members
   where room_id = v_room.id
-    and access_token_hash = encode(sha256(convert_to(p_access_token, 'UTF8')), 'hex');
+    and access_token_hash = encode(extensions.digest(convert_to(p_access_token, 'UTF8'), 'sha256'), 'hex');
 
   if not found then raise exception '参加コードが正しくありません'; end if;
 
@@ -255,7 +256,7 @@ begin
   select * into v_me
   from public.draft_room_members
   where room_id = v_room.id
-    and access_token_hash = encode(sha256(convert_to(p_access_token, 'UTF8')), 'hex');
+    and access_token_hash = encode(extensions.digest(convert_to(p_access_token, 'UTF8'), 'sha256'), 'hex');
 
   if not found then raise exception '参加コードが正しくありません'; end if;
 
