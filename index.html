@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -9,84 +8,280 @@
   <style>
     * { box-sizing: border-box; }
     body {
-      margin: 0;
-      padding: 24px 18px;
-      background: #101827;
-      color: white;
-      font-family: sans-serif;
+      margin: 0; padding: 24px 16px 48px; min-height: 100vh;
+      background: #101827; color: #f8fafc; font-family: system-ui, sans-serif;
     }
-    .container { max-width: 600px; margin: auto; }
-    h1 { font-size: 30px; letter-spacing: 2px; }
-    .sub { color: #94a3b8; }
-    .panel {
-      background: #1e293b;
-      border-radius: 16px;
-      padding: 20px;
-      margin-top: 20px;
+    .container { max-width: 760px; margin: auto; }
+    h1 { margin: 0; font-size: 30px; letter-spacing: 2px; }
+    h2 { margin: 0 0 14px; font-size: 19px; }
+    h3 { margin: 0 0 10px; font-size: 15px; }
+    .sub { color: #94a3b8; margin: 6px 0 22px; }
+    .panel { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-top: 16px; }
+    .muted { color: #94a3b8; font-size: 13px; }
+    .step { color: #5eead4; font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+    .count-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 18px; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .count-btn, .primary, .secondary, .back-btn {
+      border: 0; border-radius: 10px; padding: 13px 16px; font-weight: 700;
     }
-    button {
-      width: 100%;
-      padding: 15px;
-      border: 0;
-      border-radius: 10px;
-      background: #0d9488;
-      color: white;
-      font-size: 16px;
-      font-weight: bold;
+    .count-btn { background: #334155; color: #cbd5e1; }
+    .count-btn.active { background: #0f766e; color: white; outline: 2px solid #5eead4; }
+    .primary { background: #0d9488; color: white; width: 100%; }
+    .primary:disabled { opacity: .4; cursor: not-allowed; }
+    .secondary { background: #334155; color: #e2e8f0; }
+    .back-btn { background: transparent; border: 1px solid #475569; color: #cbd5e1; margin-bottom: 14px; }
+    .toolbar { display: flex; gap: 10px; align-items: center; margin: 14px 0; }
+    .search { width: 100%; min-width: 0; background: #0f172a; color: white; border: 1px solid #475569; border-radius: 9px; padding: 12px; }
+    .selected-box { background: #0f172a; border-radius: 12px; padding: 14px; margin: 14px 0 18px; }
+    .selected-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .selected-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+    .chip { background: #134e4a; color: #ccfbf1; border: 1px solid #0f766e; border-radius: 999px; padding: 6px 10px; font-size: 13px; }
+    .roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 390px; overflow: auto; padding-right: 3px; }
+    .person { display: flex; align-items: center; gap: 9px; padding: 11px 10px; background: #273449; border: 1px solid #3b4b62; border-radius: 9px; min-width: 0; cursor: pointer; }
+    .person:has(input:checked) { background: #134e4a; border-color: #0d9488; }
+    .person input { accent-color: #14b8a6; width: 17px; height: 17px; flex: 0 0 auto; }
+    .person span { overflow-wrap: anywhere; font-size: 14px; }
+    .person.disabled { opacity: .45; cursor: not-allowed; }
+    .add-row { display: flex; gap: 8px; margin-top: 12px; }
+    .add-row input { flex: 1; min-width: 0; background: #0f172a; color: white; border: 1px solid #475569; border-radius: 9px; padding: 11px; }
+    .add-row button { white-space: nowrap; }
+    .hint { min-height: 20px; color: #fbbf24; font-size: 13px; margin: 8px 0 0; }
+    .summary { background: #0f172a; border-radius: 12px; padding: 16px; margin: 14px 0; }
+    .summary ol { padding-left: 24px; line-height: 2; margin-bottom: 0; }
+    .hidden { display: none !important; }
+    .footer-note { color: #64748b; text-align: center; font-size: 12px; margin-top: 18px; }
+    @media (max-width: 520px) {
+      body { padding: 20px 12px 36px; }
+      .panel { padding: 16px; }
+      .roster { grid-template-columns: 1fr; max-height: 430px; }
+      .toolbar { align-items: stretch; }
     }
-    #status { margin-top: 15px; color: #5eead4; }
-    #players { line-height: 2; }
   </style>
 </head>
 <body>
-  <div class="container">
+  <main class="container">
     <h1>BOAT DRAFT</h1>
     <p class="sub">ボートレーサー ドラフト会議</p>
 
-    <div class="panel">
-      <h2>候補選手</h2>
-      <p id="count">読み込み待ち</p>
-      <button onclick="loadPlayers()">選手一覧を読み込む</button>
-      <p id="status">接続準備中</p>
-      <div id="players"></div>
-    </div>
-  </div>
+    <section id="registration">
+      <div class="panel">
+        <div class="step">STEP 1</div>
+        <h2>参加者登録</h2>
+        <p class="muted">今回のドラフトに参加する人数を選択してください。</p>
+        <div class="count-switch">
+          <button class="count-btn active" data-count="3" type="button">3人で開催</button>
+          <button class="count-btn" data-count="6" type="button">6人で開催</button>
+        </div>
+
+        <div class="selected-box">
+          <div class="selected-head">
+            <strong>選択中の参加者</strong>
+            <strong id="selectedCount">0 / 3人</strong>
+          </div>
+          <div id="selectedList" class="selected-list"><span class="muted">参加者を選択してください</span></div>
+        </div>
+
+        <h3>参加者名簿（50人）</h3>
+        <p class="muted">名前をタップして選択・解除できます。同じ人は重複して選べません。</p>
+        <div class="toolbar">
+          <input id="searchInput" class="search" type="search" placeholder="名前で検索">
+        </div>
+        <div id="roster" class="roster"></div>
+
+        <div class="panel" style="padding:14px;margin-top:16px;background:#172235">
+          <h3>名簿にいない人を追加</h3>
+          <p class="muted">ここで追加した参加者は今回のドラフト限定です。名簿には保存されません。</p>
+          <div class="add-row">
+            <input id="newName" type="text" maxlength="30" placeholder="参加者名を入力">
+            <button id="addButton" class="secondary" type="button">追加</button>
+          </div>
+          <p id="message" class="hint" aria-live="polite"></p>
+        </div>
+
+        <button id="registerButton" class="primary" type="button" disabled>参加者を確定する</button>
+        <p class="footer-note">選択できる人数ちょうどになると確定できます。</p>
+      </div>
+    </section>
+
+    <section id="draftStart" class="hidden">
+      <button id="backButton" class="back-btn" type="button">← 参加者登録に戻る</button>
+      <div class="panel">
+        <div class="step">STEP 2</div>
+        <h2>ドラフト開始</h2>
+        <p class="muted">今回の参加者が確定しました。</p>
+        <div class="summary">
+          <strong id="finalCount"></strong>
+          <ol id="finalList"></ol>
+        </div>
+        <p class="muted">次のステップで、同時指名・重複時の抽選・指名順の進行機能を追加していきます。</p>
+        <button id="editButton" class="secondary" type="button" style="width:100%">参加者を変更する</button>
+      </div>
+    </section>
+  </main>
 
   <script>
-    const SUPABASE_URL = "https://cvazmwrqtsmreqvuejpk.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_ATXn9_JLVP7pR0bZmVpMyw_jK0VF51W";
+    const initialRoster = [
+      "上條暢嵩", "上野真之介", "中島孝平", "中野次郎", "丸野一樹",
+      "久田敏之", "今泉友吾", "仲谷颯仁", "佐藤翼", "原田幸哉",
+      "吉田拡郎", "吉田裕平", "大上卓人", "大峯豊", "守田俊介",
+      "宮之原輝紀", "宮地元輝", "小池修平", "山口剛", "山崎郡",
+      "山田康二", "峰竜太", "島村隆幸", "平田忠則", "新田雄史",
+      "新開航", "木下翔太", "村岡賢人", "桐生順平", "毒島誠",
+      "池田浩二", "深谷知博", "瓜生正義", "白井英治", "磯部誠",
+      "竹田和哉", "篠崎仁志", "篠崎元志", "羽野直也", "茅原悠紀",
+      "藤原啓史朗", "藤岡俊介", "西山貴浩", "西村拓也", "西野雄貴",
+      "赤岩善生", "関浩哉", "馬場貴也", "高橋竜矢", "黒野元基"
+    ];
 
-    const db = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_KEY
-    );
+    let participantLimit = 3;
+    let selected = [];
+    let temporaryRoster = [];
+    let confirmedParticipants = [];
 
-    async function loadPlayers() {
-      const status = document.getElementById("status");
-      const list = document.getElementById("players");
-      status.textContent = "読み込み中...";
-      list.innerHTML = "";
+    const rosterElement = document.getElementById("roster");
+    const selectedListElement = document.getElementById("selectedList");
+    const selectedCountElement = document.getElementById("selectedCount");
+    const registerButton = document.getElementById("registerButton");
+    const messageElement = document.getElementById("message");
 
-      const { data, error } = await db
-        .from("players")
-        .select("name")
-        .eq("is_active", true)
-        .order("name");
+    function allNames() {
+      return [...initialRoster, ...temporaryRoster];
+    }
 
-      if (error) {
-        status.textContent = "エラー：" + error.message;
+    function renderRoster() {
+      const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
+      const names = allNames().filter(name => name.toLowerCase().includes(keyword));
+      rosterElement.replaceChildren();
+
+      names.forEach(name => {
+        const label = document.createElement("label");
+        label.className = "person";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = selected.includes(name);
+        checkbox.disabled = !checkbox.checked && selected.length >= participantLimit;
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) {
+            if (selected.length < participantLimit && !selected.includes(name)) selected.push(name);
+          } else {
+            selected = selected.filter(item => item !== name);
+          }
+          render();
+        });
+        const text = document.createElement("span");
+        text.textContent = name + (temporaryRoster.includes(name) ? "（今回のみ）" : "");
+        label.append(checkbox, text);
+        if (checkbox.disabled) label.classList.add("disabled");
+        rosterElement.appendChild(label);
+      });
+
+      if (names.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "muted";
+        empty.textContent = "該当する参加者がいません。";
+        rosterElement.appendChild(empty);
+      }
+    }
+
+    function renderSelected() {
+      selectedCountElement.textContent = selected.length + " / " + participantLimit + "人";
+      selectedListElement.replaceChildren();
+      if (selected.length === 0) {
+        const empty = document.createElement("span");
+        empty.className = "muted";
+        empty.textContent = "参加者を選択してください";
+        selectedListElement.appendChild(empty);
+      } else {
+        selected.forEach(name => {
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.textContent = name;
+          selectedListElement.appendChild(chip);
+        });
+      }
+      registerButton.disabled = selected.length !== participantLimit;
+      registerButton.textContent = selected.length === participantLimit
+        ? "参加者を確定する"
+        : "あと " + (participantLimit - selected.length) + " 人選択してください";
+    }
+
+    function render() {
+      renderRoster();
+      renderSelected();
+    }
+
+    document.querySelectorAll(".count-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        const nextLimit = Number(button.dataset.count);
+        if (selected.length > nextLimit) {
+          selected = selected.slice(0, nextLimit);
+        }
+        participantLimit = nextLimit;
+        document.querySelectorAll(".count-btn").forEach(item => {
+          item.classList.toggle("active", item === button);
+        });
+        render();
+      });
+    });
+
+    document.getElementById("searchInput").addEventListener("input", renderRoster);
+
+    function addTemporaryParticipant() {
+      const input = document.getElementById("newName");
+      const name = input.value.trim();
+      messageElement.textContent = "";
+      if (!name) {
+        messageElement.textContent = "参加者名を入力してください。";
         return;
       }
-
-      document.getElementById("count").textContent =
-        data.length + "人登録済み";
-
-      list.innerHTML = data.map((p, i) =>
-        `<p>${i + 1}. ${p.name}</p>`
-      ).join("");
-
-      status.textContent = "データベース接続成功！";
+      if (allNames().some(item => item.toLowerCase() === name.toLowerCase())) {
+        messageElement.textContent = "同じ名前が名簿に登録されています。";
+        return;
+      }
+      if (selected.length >= participantLimit) {
+        messageElement.textContent = "参加者の選択人数が上限に達しています。";
+        return;
+      }
+      temporaryRoster.push(name);
+      selected.push(name);
+      input.value = "";
+      document.getElementById("searchInput").value = "";
+      render();
+      messageElement.textContent = name + " を今回の参加者に追加しました。";
     }
+
+    document.getElementById("addButton").addEventListener("click", addTemporaryParticipant);
+    document.getElementById("newName").addEventListener("keydown", event => {
+      if (event.key === "Enter") addTemporaryParticipant();
+    });
+
+    function showDraftStart() {
+      confirmedParticipants = [...selected];
+      document.getElementById("finalCount").textContent = confirmedParticipants.length + "人で開催";
+      const finalList = document.getElementById("finalList");
+      finalList.replaceChildren();
+      confirmedParticipants.forEach(name => {
+        const item = document.createElement("li");
+        item.textContent = name;
+        finalList.appendChild(item);
+      });
+      document.getElementById("registration").classList.add("hidden");
+      document.getElementById("draftStart").classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function showRegistration() {
+      document.getElementById("draftStart").classList.add("hidden");
+      document.getElementById("registration").classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    registerButton.addEventListener("click", showDraftStart);
+    document.getElementById("backButton").addEventListener("click", showRegistration);
+    document.getElementById("editButton").addEventListener("click", showRegistration);
+
+    render();
   </script>
 </body>
 </html>
