@@ -132,6 +132,7 @@ declare
   v_active_count integer;
   v_submitted_count integer;
   v_my_submitted boolean;
+  v_my_award text;
   v_acquired jsonb;
   v_revealed jsonb;
 begin
@@ -179,6 +180,12 @@ begin
       and member_id = v_me.id
   ) into v_my_submitted;
 
+  select a.player_name into v_my_award
+  from public.draft_awards a
+  where a.room_id = v_room.id
+    and a.round_no = v_room.current_round
+    and a.member_id = v_me.id;
+
   select coalesce(jsonb_agg(jsonb_build_object(
     'player_name', a.player_name,
     'member_name', m.member_name,
@@ -220,6 +227,8 @@ begin
     'active_count', v_active_count,
     'submitted_count', v_submitted_count,
     'my_submitted', v_my_submitted,
+    'my_awarded', v_my_award is not null,
+    'my_awarded_player', v_my_award,
     'acquired_players', v_acquired,
     'last_reveal', v_revealed
   );
