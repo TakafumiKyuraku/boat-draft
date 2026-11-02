@@ -76,13 +76,13 @@ begin
   end if;
 
   if exists (
-    select 1 from unnest(p_member_names) n
+    select 1 from unnest(p_member_names) as u(n)
     where n is null or btrim(n) = ''
   ) then
     raise exception '参加者名に空欄があります';
   end if;
 
-  if (select count(distinct lower(btrim(n))) from unnest(p_member_names) n)
+  if (select count(distinct lower(btrim(n))) from unnest(p_member_names) as u(n))
      <> cardinality(p_member_names) then
     raise exception '参加者名が重複しています';
   end if;
