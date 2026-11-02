@@ -17,6 +17,8 @@ create table if not exists public.draft_rooms (
 -- The current room flow identifies rooms by room_code and does not use room_name.
 alter table public.draft_rooms add column if not exists room_name text;
 alter table public.draft_rooms alter column room_name drop not null;
+-- Legacy column not used by the current app; allow inserts that omit it.
+alter table public.draft_rooms alter column max_members drop not null;
 
 create table if not exists public.draft_room_members (
   id uuid primary key default gen_random_uuid(),
