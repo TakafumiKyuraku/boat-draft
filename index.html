@@ -1,0 +1,92 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BOAT DRAFT</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 18px;
+      background: #101827;
+      color: white;
+      font-family: sans-serif;
+    }
+    .container { max-width: 600px; margin: auto; }
+    h1 { font-size: 30px; letter-spacing: 2px; }
+    .sub { color: #94a3b8; }
+    .panel {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      border: 0;
+      border-radius: 10px;
+      background: #0d9488;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    #status { margin-top: 15px; color: #5eead4; }
+    #players { line-height: 2; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>BOAT DRAFT</h1>
+    <p class="sub">ボートレーサー ドラフト会議</p>
+
+    <div class="panel">
+      <h2>候補選手</h2>
+      <p id="count">読み込み待ち</p>
+      <button onclick="loadPlayers()">選手一覧を読み込む</button>
+      <p id="status">接続準備中</p>
+      <div id="players"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = https://cvazmwrqtsmreqvuejpk.supabase.co;
+    const SUPABASE_KEY = sb_publishable_ATXn9_JLVP7pR0bZmVpMyw_jK0VF51W;
+
+    const db = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+    async function loadPlayers() {
+      const status = document.getElementById("status");
+      const list = document.getElementById("players");
+      status.textContent = "読み込み中...";
+      list.innerHTML = "";
+
+      const { data, error } = await db
+        .from("players")
+        .select("name")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) {
+        status.textContent = "エラー：" + error.message;
+        return;
+      }
+
+      document.getElementById("count").textContent =
+        data.length + "人登録済み";
+
+      list.innerHTML = data.map((p, i) =>
+        `<p>${i + 1}. ${p.name}</p>`
+      ).join("");
+
+      status.textContent = "データベース接続成功！";
+    }
+  </script>
+</body>
+</html>
